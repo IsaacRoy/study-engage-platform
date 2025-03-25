@@ -1,0 +1,7 @@
+
+# All Edge Functions not using OpenAI need a config.toml just like this one.
+# Once there's a config.toml file, Supabase will correctly process your Edge Function,
+# rather than assuming it's a Node.js function which would require compilation.
+
+[[env.shared]]
+GEMINI_API_KEY = "AIzaSyCEprN_lo0ZVMFSjvHVnbJrkL4txkpa2Wo"

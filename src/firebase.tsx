@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getAuth, connectAuthEmulator } from "firebase/auth";
-import { getDatabase, connectDatabaseEmulator } from "firebase/database";
+import { getDatabase, connectDatabaseEmulator, ref, get, remove } from "firebase/database";
 import { getStorage, connectStorageEmulator } from "firebase/storage";
 
 // Your Firebase configuration
@@ -40,3 +40,22 @@ if (useEmulators) {
 } else {
   console.log("Using Firebase production services");
 }
+
+// Function to delete empty courses
+async function deleteEmptyCourses() {
+  const db = getDatabase();
+  const coursesRef = ref(db, 'courses');
+  const snapshot = await get(coursesRef);
+
+  if (snapshot.exists()) {
+    snapshot.forEach(courseSnapshot => {
+      const courseData = courseSnapshot.val();
+      if (!courseData || Object.keys(courseData).length === 0) {
+        remove(ref(db, `courses/${courseSnapshot.key}`));
+      }
+    });
+  }
+}
+
+// Call this function periodically or on a specific trigger
+deleteEmptyCourses();

@@ -44,23 +44,28 @@ export const fetchStudentAssignments = async (userId: string): Promise<Assignmen
       }
     }
     
-    // Get assignments for each course
+    // Get assignments for each course - one by one to avoid index errors
     for (const courseId of courseIds) {
-      const assignmentsRef = query(
-        ref(database, 'assignments'),
-        orderByChild('course_id'),
-        equalTo(courseId)
-      );
-      
-      const assignmentSnapshot = await get(assignmentsRef);
-      if (assignmentSnapshot.exists()) {
-        assignmentSnapshot.forEach((childSnapshot) => {
-          assignmentsData.push({
-            id: childSnapshot.key,
-            ...childSnapshot.val(),
-            course_name: coursesMap[courseId] || 'Unknown Course'
+      try {
+        // Fetching assignments for each course individually to avoid index errors
+        const assignmentsRef = ref(database, 'assignments');
+        const assignmentsSnapshot = await get(assignmentsRef);
+        
+        if (assignmentsSnapshot.exists()) {
+          assignmentsSnapshot.forEach((childSnapshot) => {
+            const assignment = childSnapshot.val();
+            if (assignment.course_id === courseId) {
+              assignmentsData.push({
+                id: childSnapshot.key,
+                ...assignment,
+                course_name: coursesMap[courseId] || 'Unknown Course'
+              });
+            }
           });
-        });
+        }
+      } catch (courseError) {
+        console.error(`Error fetching assignments for course ${courseId}:`, courseError);
+        // Continue with other courses even if one fails
       }
     }
     
@@ -88,13 +93,17 @@ export const fetchStudentAssignments = async (userId: string): Promise<Assignmen
       return {
         ...assignment,
         submitted: !!submission,
-        submission: submission || null
+        submission: submission || null,
+        // Handle AI-generated assignments that might have special fields
+        assignmentType: assignment.assignmentType || "text",
+        textContent: assignment.description || assignment.textContent
       };
     });
     
     return assignmentsWithSubmissions;
   } catch (error) {
     console.error("Error fetching assignments:", error);
-    throw error;
+    toast.error("Failed to fetch assignments. Please try again later.");
+    return [];
   }
 };
